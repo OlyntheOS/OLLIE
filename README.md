@@ -1,6 +1,6 @@
-# Lumin-engine
+# OLLIE
 
-`lumin-engine` is a Go-based local assistant engine that exposes a Unix socket API, manages model lifecycle, and routes tool calls through a permissions layer. It runs as a systemd service, listens on a Unix socket, and bridges natural language requests to safe OS actions.
+`OLLIE` is a Go-based local assistant engine that exposes a Unix socket API, manages model lifecycle, and routes tool calls through a permissions layer. It runs as a systemd service, listens on a Unix socket, and bridges natural language requests to safe OS actions.
 
 ---
 
@@ -10,7 +10,7 @@
 User types message
     ↓
 IPC socket receives JSON request
-    ↓ cmd/lumin-engine/main.go
+    ↓ cmd/OLLIE/main.go
 Tokenize text → integers
     ↓ internal/inference/tokenizer.go (loaded from GGUF)
 Build context window with conversation history
@@ -60,7 +60,7 @@ Watches the output stream, detects `[[tool:...]]` blocks mid-stream (without buf
 Probes the system at startup to find the best compute backend. If an Nvidia GPU with enough VRAM is found, it offloads layers to GPU. Falls back to CPU. Enforces 80% RAM ceiling and handles suspend/resume. You want inference to be fast, but not crash the system.
 
 ### 6. IPC daemon — the Unix socket server
-**Files**: `internal/ipc/server.go`, `internal/ipc/handler.go`, `internal/ipc/protocol.go`, `cmd/lumin-engine/main.go`
+**Files**: `internal/ipc/server.go`, `internal/ipc/handler.go`, `internal/ipc/protocol.go`, `cmd/OLLIE/main.go`
 
 The Go daemon that runs as a systemd service. Listens on a Unix socket at `/run/lumin/engine.sock`. Any app (desktop widget, panel applet, terminal) connects and sends/receives JSON-RPC 2.0 messages. This is the interface between the rest of LuminOS and the AI engine. Nothing touches the system except through this.
 
@@ -88,8 +88,8 @@ Every tool has a capability flag. Users grant capabilities per-model via `~/.con
 ## Project layout
 
 ### Entry point
-- `cmd/lumin-engine/main.go` — application entrypoint; loads config, initializes model and permissions, starts socket server.
-- `lumin-engine.service` — systemd user service file.
+- `cmd/OLLIE/main.go` — application entrypoint; loads config, initializes model and permissions, starts socket server.
+- `OLLIE.service` — systemd user service file.
 
 ### Configuration
 - `internal/config/config.go` — loads `/etc/lumin/engine.toml` (socket path, permissions, audit log, context size).
@@ -151,7 +151,7 @@ make build
 2. Builds with CUDA support (auto-detects; falls back to CPU-only)
 3. Copies `libllama.a` and `llama.h` to `lib/`
 4. Builds Go binary with CGo enabled
-5. Produces `bin/lumin-engine`
+5. Produces `bin/OLLIE`
 
 **Requirements:**
 - `gcc` or `clang` (C compiler)
@@ -164,7 +164,7 @@ make build
 ```bash
 make run
 ````markdown
-# lumin-engine
+# OLLIE
 
 One consolidated document: this `README.md` contains the full project overview, architecture, build instructions, and the implementation/verification summaries previously spread across multiple Markdown files.
 
@@ -174,7 +174,7 @@ If you prefer the older, separate documents, their material is included below �
 
 ## Quick Overview
 
-`lumin-engine` is a Go-based local assistant engine that exposes a Unix socket API, manages model lifecycle, and routes tool calls through a permissions sandbox. It supports systemd socket activation, model management, a Qt/QML control panel, and model-backed tokenization via `llama.cpp` (GGUF models).
+`OLLIE` is a Go-based local assistant engine that exposes a Unix socket API, manages model lifecycle, and routes tool calls through a permissions sandbox. It supports systemd socket activation, model management, a Qt/QML control panel, and model-backed tokenization via `llama.cpp` (GGUF models).
 
 Core flow:
 
@@ -199,7 +199,7 @@ This file consolidates the following topics:
 
 ## Project Layout (short)
 
-- `cmd/lumin-engine/` — main daemon (systemd + socket activation)
+- `cmd/OLLIE/` — main daemon (systemd + socket activation)
 - `cmd/model-wizard/` — model download manager (HTTP + SHA256)
 - `cmd/lumin-control-panel/` — Qt/QML control panel (Kirigami)
 - `internal/inference/` — CGo bindings (`llama_cgo.go`), model lifecycle, tokenizer
@@ -228,7 +228,7 @@ Prereqs: `gcc`/`clang`, `cmake`, Go 1.22+, optional CUDA toolkit for GPU backend
 Build everything:
 
 ```bash
-cd /path/to/lumin-engine
+cd /path/to/OLLIE
 make build
 
 # Build model wizard
@@ -245,17 +245,17 @@ Quick test (local socket):
 
 ```bash
 # Run daemon for a quick test
-./bin/lumin-engine -socket /tmp/lumin-engine.sock &
+./bin/OLLIE -socket /tmp/OLLIE.sock &
 
 # Health check via JSON-RPC (example)
-printf '%s' '{"jsonrpc":"2.0","id":1,"method":"health"}' | nc -U /tmp/lumin-engine.sock
+printf '%s' '{"jsonrpc":"2.0","id":1,"method":"health"}' | nc -U /tmp/OLLIE.sock
 ```
 
 Systemd install (optional):
 
 ```bash
 sudo cp contrib/lumin.socket /etc/systemd/system/
-sudo cp contrib/lumin-engine.service /etc/systemd/system/
+sudo cp contrib/OLLIE.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable lumin.socket
 ```
@@ -266,7 +266,7 @@ sudo systemctl enable lumin.socket
 
 - Tokenizer: Real GGUF tokenizer via `llama_tokenize` and `llama_token_to_piece` (not word-split) — `internal/inference/llama_cgo.go` and `internal/inference/tokenizer.go`.
 - Inference: Real llama.cpp C API usage via CGo (`#include "llama.h"`).
-- Socket activation: `contrib/lumin.socket` + `cmd/lumin-engine/main.go` uses `activation.Listeners()` to inherit systemd socket.
+- Socket activation: `contrib/lumin.socket` + `cmd/OLLIE/main.go` uses `activation.Listeners()` to inherit systemd socket.
 - D-Bus: `internal/tools/plasma.go` uses `github.com/godbus/dbus/v5` to call `org.kde.Plasma.*` methods (SetTheme, SetWallpaper, GetPanelConfig, etc.).
 - Model manager: `cmd/model-wizard` performs streaming HTTP downloads with SHA256 verification and atomic rename into `~/.local/share/lumin/models`.
 - GUI: `cmd/lumin-control-panel` (Qt/QML + Kirigami) with `IPCClient.qml` for JSON-RPC over Unix socket.
@@ -289,7 +289,7 @@ sudo systemctl enable lumin.socket
 
 - llama_cgo.go compiles with `#include "llama.h"` (0 errors reported in static checks performed during implementation).
 - `internal/tools/plasma.go` compiles and uses godbus/dbus.
-- `cmd/lumin-engine/main.go` compiles and supports systemd socket activation.
+- `cmd/OLLIE/main.go` compiles and supports systemd socket activation.
 - `internal/ipc/server.go` exposes a `NewServer(listener, handler)` constructor.
 - `cmd/model-wizard` performs streaming download + SHA256 verification and atomic rename.
 - Qt/QML control panel scaffolding (CMakeLists + QML) present and ready to build.
