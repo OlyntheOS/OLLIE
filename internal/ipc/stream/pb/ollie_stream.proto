@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package ollie.stream.v1;
+
+option go_package = "lumin-engine/internal/ipc/stream/pb;streampb";
+
+enum MessageType {
+  MESSAGE_TYPE_UNSPECIFIED = 0;
+  MESSAGE_TYPE_HANDSHAKE = 1;
+  MESSAGE_TYPE_REQUEST = 2;
+  MESSAGE_TYPE_RESPONSE = 3;
+  MESSAGE_TYPE_EVENT = 4;
+  MESSAGE_TYPE_CANCEL = 5;
+  MESSAGE_TYPE_PING = 6;
+  MESSAGE_TYPE_PONG = 7;
+}
+
+message Envelope {
+  uint32 version = 1;
+  MessageType type = 2;
+  string request_id = 3;
+  string session_id = 4;
+  string trace_id = 5;
+  bytes payload = 6;
+  Error error = 7;
+  uint32 flags = 8;
+  int64 timestamp = 9;
+}
+
+message Error {
+  string code = 1;
+  string message = 2;
+  bool retryable = 3;
+}
+
+message Handshake {
+  string protocol = 1;
+  uint32 version = 2;
+  string client = 3;
+}
+
+message HandshakeAck {
+  string protocol = 1;
+  uint32 version = 2;
+  string server = 3;
+}
+
+message Request {
+  string method = 1;
+  bytes params = 2;
+  uint32 timeout_ms = 3;
+  bool stream = 4;
+  map<string, string> metadata = 5;
+}
+
+message Response {
+  bytes result = 1;
+  Error error = 2;
+}
+
+message Event {
+  string type = 1;
+  bytes data = 2;
+}
